@@ -1,32 +1,52 @@
+/*
+	This file is part of B-cubed.
+
+	Copyright (C) 2009, 2010, 2011, Edward Rosten and Susan Cox
+
+	B-cubed is free software; you can redistribute it and/or
+	modify it under the terms of the GNU Lesser General Public
+	License as published by the Free Software Foundation; either
+	version 3.0 of the License, or (at your option) any later version.
+
+	This library is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+	Lesser General Public License for more details.
+
+	You should have received a copy of the GNU General Public License     
+	along with this program.  If not, see <http://www.gnu.org/licenses/>
+*/
+
 
 ///This class compute the log-diff-hess probability of a spot, given an
 ///image patch and background due to existing spots.
 struct SWBG_NAME
 {
-	static const int NumParameters=4;
+	//RFBA: Update NumParameter for 3D Image Computing, All Vector/Matrix Size is updated, Modified@20180306
+	static const int NumParameters=5;
 
 	vector<pair<double, double> > log_prob;
-	vector<Vector<4> > diff_log_prob;
-	vector<Matrix<4> > hess_log_prob;
+	vector<Vector<5> > diff_log_prob;
+	vector<Matrix<5> > hess_log_prob;
 
 	double    get_val (double d){return d;}
-	Vector<4> get_diff(double){return Zeros;}
-	Matrix<4> get_hess(double){return Zeros;}
+	Vector<5> get_diff(double){return Zeros;}
+	Matrix<5> get_hess(double){return Zeros;}
 
-	double    get_val (const pair<double, Vector<4> >& d){return d.first;}
-	Vector<4> get_diff(const pair<double, Vector<4> >& d){return d.second;}
-	Matrix<4> get_hess(const pair<double, Vector<4> >&){return Zeros;}
+	double    get_val (const pair<double, Vector<5> >& d){return d.first;}
+	Vector<5> get_diff(const pair<double, Vector<5> >& d){return d.second;}
+	Matrix<5> get_hess(const pair<double, Vector<5> >&){return Zeros;}
 
-	double    get_val (const tuple<double, Vector<4>, Matrix<4> >& d){return get<0>(d);}
-	Vector<4> get_diff(const tuple<double, Vector<4>, Matrix<4> >& d){return get<1>(d);}
-	Matrix<4> get_hess(const tuple<double, Vector<4>, Matrix<4> >& d){return get<2>(d);}
+	double    get_val (const tuple<double, Vector<5>, Matrix<5> >& d){return get<0>(d);}
+	Vector<5> get_diff(const tuple<double, Vector<5>, Matrix<5> >& d){return get<1>(d);}
+	Matrix<5> get_hess(const tuple<double, Vector<5>, Matrix<5> >& d){return get<2>(d);}
 
 	template<class C> bool type_has_hess(const C&)                                   { return 0;}
-	                  bool type_has_hess(const tuple<double, Vector<4>, Matrix<4> >&){ return 1;}
+	                  bool type_has_hess(const tuple<double, Vector<5>, Matrix<5> >&){ return 1;}
 
 	template<class C> bool type_has_diff(const C&)                                   { return 0;}
-	                  bool type_has_diff(const pair<double, Vector<4> > &)           { return 1;}
-	                  bool type_has_diff(const tuple<double, Vector<4>, Matrix<4> >&){ return 1;}
+	                  bool type_has_diff(const pair<double, Vector<5> > &)           { return 1;}
+	                  bool type_has_diff(const tuple<double, Vector<5>, Matrix<5> >&){ return 1;}
 	
 #ifdef SWBG_HAVE_DRIFT
 	#define SWBG_SPOT_INTENSITIES vector<vector<Input> >
@@ -89,8 +109,8 @@ struct SWBG_NAME
 			//assert(sample_intensities[frame].size() == n_pix);
 
 			double log_prob_off=0, log_prob_on = 0;
-			Vector<4> diff = Zeros;
-			Matrix<4> hess = Zeros;
+			Vector<5> diff = Zeros;
+			Matrix<5> hess = Zeros;
 
 
 			for(unsigned int p=0; p < n_pix; p++)
@@ -142,7 +162,7 @@ struct SWBG_NAME
 			return log_prob[obs].second;
 	}	
 
-	Vector<4>  diff_log(int state, int obs) const
+	Vector<5>  diff_log(int state, int obs) const
 	{
 		assert(state >=0 && state <= 2);
 		assert(obs >=0 && obs < (int)diff_log_prob.size());
@@ -153,7 +173,7 @@ struct SWBG_NAME
 			return Zeros;
 	}	
 
-	Matrix<4>  hess_log(int state, int obs) const
+	Matrix<5>  hess_log(int state, int obs) const
 	{
 		assert(state >=0 && state <= 2);
 		assert(obs >=0 && obs < (int)hess_log_prob.size());

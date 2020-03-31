@@ -1,6 +1,25 @@
+/*
+	This file is part of B-cubed.
+
+	Copyright (C) 2009, 2010, 2011, Edward Rosten and Susan Cox
+
+	B-cubed is free software; you can redistribute it and/or
+	modify it under the terms of the GNU Lesser General Public
+	License as published by the Free Software Foundation; either
+	version 3.0 of the License, or (at your option) any later version.
+
+	This library is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+	Lesser General Public License for more details.
+
+	You should have received a copy of the GNU General Public License     
+	along with this program.  If not, see <http://www.gnu.org/licenses/>
+*/
+
 #ifndef STORM_INCLUDE_UTILITY_H
 #define STORM_INCLUDE_UTILITY_H
-#include <cvd/image.h>
+#include "cvd/image.h"
 #include <vector>
 #include <string>
 #include <cstring>
@@ -78,5 +97,8 @@ void open_or_die(Stream& save_spots, const std::string& save_spots_file)
 		exit(1);
 	}
 }
+
+//RFBA: Get number of processors, Added@20180306
+int GetNoOfProcessors();
 
 #endif

@@ -1,11 +1,45 @@
+ /*
+	This file is part of B-cubed.
+
+	Copyright (C) 2009, 2010, 2011, Edward Rosten and Susan Cox
+
+	B-cubed is free software; you can redistribute it and/or
+	modify it under the terms of the GNU Lesser General Public
+	License as published by the Free Software Foundation; either
+	version 3.0 of the License, or (at your option) any later version.
+
+	This library is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+	Lesser General Public License for more details.
+
+	You should have received a copy of the GNU General Public License
+	along with this program.  If not, see <http://www.gnu.org/licenses/>
+*/
+
 #ifndef INC_STORM_H
 #define INC_STORM_H
 
 #include <TooN/TooN.h>
 #include <cvd/image.h>
 #include <utility>
-#include <tr1/tuple>
+#include <tuple>
 #include "utility.h"
+
+//RFBA: Remove 2D Image Shape, Removed@20180306
+/**See spot_shape()
+@param x \f$\Vec{x}\f$
+@param phi \f$\Vec{\phi}\f$
+@return \f$s(\Vec{x}, \Vec{\phi}) \f$
+@ingroup gStorm
+*/
+/*
+template<class B> double spot_shape_s(const TooN::Vector<2>& x, const TooN::Vector<4, double, B>& phi)
+{
+	return -norm_sq(x - phi.template slice<2,2>()) / (2*phi[1]*phi[1]);
+}
+*/
+
 
 
 /**See spot_shape()
@@ -14,9 +48,12 @@
 @return \f$s(\Vec{x}, \Vec{\phi}) \f$
 @ingroup gStorm
 */
-template<class B> double spot_shape_s(const TooN::Vector<2>& x, const TooN::Vector<4, double, B>& phi)
+template<class B> double spot_shape_s(const TooN::Vector<3>& x, const TooN::Vector<5, double, B>& phi, double zFactor)
 {
-	return -norm_sq(x - phi.template slice<2,2>()) / (2*phi[1]*phi[1]);
+	//RFBA: Update for 3D Image, Modified@20180306
+	Vector<3> diff = x - phi.template slice<2, 3>();
+	diff[2] = diff[2] / zFactor;
+	return -norm_sq(diff) / (2 * phi[1] * phi[1]);	
 }
 
 /** Compute the spot shape and its derivative with respect to posision. See also spot_shape()
@@ -24,20 +61,21 @@ template<class B> double spot_shape_s(const TooN::Vector<2>& x, const TooN::Vect
 @param phi \f$\Vec{\phi}\f$
 @ingroup gStorm
 */
-template<class B> std::pair<double, TooN::Vector<4> > spot_shape_diff_position(const TooN::Vector<2>& x, const TooN::Vector<4, double, B>& phi)
+template<class B> std::pair<double, TooN::Vector<5> > spot_shape_diff_position(const TooN::Vector<3>& x, const TooN::Vector<5, double, B>& phi, double zFactor)
 {
 	using namespace TooN;
 
-	double s = spot_shape_s(x, phi);
-	double r_2_pi = sqrt(2*M_PI);
+	double s = spot_shape_s(x, phi, zFactor);
+	double r_2_pi = sqrt(2 * M_PI);
 
-	double prob = exp(s) * phi[0]/(phi[1]*r_2_pi);
-	
-	Vector<4> deriv = (exp(s) / (phi[1]*r_2_pi)) * 
-	                       makeVector(1, 
-						              -phi[0] * (1 + 2*s)/phi[1], 
-									  (x[0] - phi[2])*(phi[0]/sq(phi[1])), 
-									  (x[1] - phi[3])*(phi[0]/sq(phi[1])));
+	double prob = exp(s) * phi[0] / (phi[1] * r_2_pi);
+
+	Vector<5> deriv = (exp(s) / (phi[1] * r_2_pi)) *
+		makeVector(1,
+			-phi[0] * (1 + 2 * s) / phi[1],
+			(x[0] - phi[2])*(phi[0] / sq(phi[1])),
+			(x[1] - phi[3])*(phi[0] / sq(phi[1])),
+			(x[2] - phi[4])*(phi[0] / sq(phi[1])));
 	return std::make_pair(prob, deriv);
 }
 
@@ -46,28 +84,31 @@ template<class B> std::pair<double, TooN::Vector<4> > spot_shape_diff_position(c
 @param phi \f$\Vec{\phi}\f$
 @ingroup gStorm
 */
-template<class B> std::tr1::tuple<double, TooN::Vector<4>, TooN::Matrix<4> > spot_shape_hess_position(const TooN::Vector<2>& x, const TooN::Vector<4, double, B>& phi)
+template<class B> std::tr1::tuple<double, TooN::Vector<5>, TooN::Matrix<5> > spot_shape_hess_position(const TooN::Vector<3>& x, const TooN::Vector<5, double, B>& phi, double zFactor)
 {
 	using namespace TooN;
 	using namespace std::tr1;
 
-	double s = spot_shape_s(x, phi);
-	double r_2_pi = sqrt(2*M_PI);
+	double s = spot_shape_s(x, phi, zFactor);
+	double r_2_pi = sqrt(2 * M_PI);
 
 	double es = exp(s);
 
-	double prob = es * phi[0]/(phi[1]*r_2_pi);
-	
-	Vector<4> deriv = (es / (phi[1]*r_2_pi)) * 
-	                       makeVector(1, 
-						              -phi[0] * (1 + 2*s)/phi[1], 
-									  (x[0] - phi[2])*(phi[0]/sq(phi[1])), 
-									  (x[1] - phi[3])*(phi[0]/sq(phi[1])));
+	double prob = es * phi[0] / (phi[1] * r_2_pi);
 
-	Matrix<4> hess;
+	//RFBA: Update for 3D Image, Modified@20180306
+	Vector<5> deriv = (es / (phi[1] * r_2_pi)) *
+		makeVector(1,
+			-phi[0] * (1 + 2 * s) / phi[1],
+			(x[0] - phi[2])*(phi[0] / sq(phi[1])),
+			(x[1] - phi[3])*(phi[0] / sq(phi[1])),
+			(x[2] - phi[4])*(phi[0] / sq(phi[1])));
+
+	//RFBA: Update for 3D Image, Modified@20180306
+	Matrix<5> hess;
 	hess[0][0] = 0;
 
-	hess[0][1] = -es*(1+2*s) / (phi[1] * phi[1] * r_2_pi);
+	hess[0][1] = -es*(1 + 2 * s) / (phi[1] * phi[1] * r_2_pi);
 	hess[1][0] = hess[0][1];
 
 	hess[0][2] = es * (x[0] - phi[2]) / (pow(phi[1], 3)*r_2_pi);
@@ -76,20 +117,30 @@ template<class B> std::tr1::tuple<double, TooN::Vector<4>, TooN::Matrix<4> > spo
 	hess[0][3] = es * (x[1] - phi[3]) / (pow(phi[1], 3)*r_2_pi);
 	hess[3][0] = es * (x[1] - phi[3]) / (pow(phi[1], 3)*r_2_pi);
 
-	hess[1][1] = 2*phi[0]*es*(1 + 5*s + 2*s*s) / ( pow(phi[1], 3) * r_2_pi);
+	hess[0][4] = es * (x[2] - phi[4]) / (pow(phi[1], 3)*r_2_pi);
+	hess[4][0] = es * (x[2] - phi[4]) / (pow(phi[1], 3)*r_2_pi);
 
-	hess[1][2] = -phi[0] * es * (3 + 2*s) * (x[0] - phi[2]) / (pow(phi[1], 4) * r_2_pi);
-	hess[1][3] = -phi[0] * es * (3 + 2*s) * (x[1] - phi[3]) / (pow(phi[1], 4) * r_2_pi);
+	hess[1][1] = 2 * phi[0] * es*(1 + 5 * s + 2 * s*s) / (pow(phi[1], 3) * r_2_pi);
+
+	hess[1][2] = -phi[0] * es * (3 + 2 * s) * (x[0] - phi[2]) / (pow(phi[1], 4) * r_2_pi);
+	hess[1][3] = -phi[0] * es * (3 + 2 * s) * (x[1] - phi[3]) / (pow(phi[1], 4) * r_2_pi);
+	hess[1][4] = -phi[0] * es * (3 + 2 * s) * (x[2] - phi[4]) / (pow(phi[1], 4) * r_2_pi);
 
 	hess[2][1] = hess[1][2];
 	hess[3][1] = hess[1][3];
+	hess[4][1] = hess[1][4];
 
 	hess[2][2] = phi[0] * es * (sq(x[0] - phi[2]) - sq(phi[1])) / (r_2_pi * pow(phi[1], 5));
 	hess[3][3] = phi[0] * es * (sq(x[1] - phi[3]) - sq(phi[1])) / (r_2_pi * pow(phi[1], 5));
-	
-	hess[2][3] = phi[0] * es * (x[0] - phi[2])*(x[1] - phi[3]) / (r_2_pi * pow(phi[1], 5));
-	hess[3][2] = hess[2][3];
+	hess[4][4] = phi[0] * es * (sq(x[2] - phi[4]) - sq(phi[1])) / (r_2_pi * pow(phi[1], 5));
 
+	hess[2][3] = phi[0] * es * (x[0] - phi[2])*(x[1] - phi[3]) / (r_2_pi * pow(phi[1], 5));	
+	hess[3][2] = hess[2][3];
+	hess[2][4] = phi[0] * es * (x[0] - phi[2])*(x[2] - phi[4]) / (r_2_pi * pow(phi[1], 5));	
+	hess[4][2] = hess[2][4];
+
+	hess[3][4] = phi[0] * es * (x[1] - phi[3])*(x[2] - phi[4]) / (r_2_pi * pow(phi[1], 5));	
+	hess[4][3] = hess[4][3];
 
 	return make_tuple(prob, deriv, hess);
 }
@@ -124,16 +175,16 @@ And the hessian is:
 template<class B> std::tr1::tuple<double, TooN::Vector<2>, TooN::Matrix<2> > spot_shape_hess(const TooN::Vector<2>& x, const TooN::Vector<4, double, B>& phi)
 {
 	double s = spot_shape_s(x, phi);
-	double r_2_pi = sqrt(2*M_PI);
+	double r_2_pi = sqrt(2 * M_PI);
 
-	double prob = exp(s) * phi[0]/(phi[1]*r_2_pi);
-	TooN::Vector<2> deriv = (exp(s) / (phi[1]*r_2_pi)) * TooN::makeVector(1, -phi[0] * (1 + 2*s)/phi[1]);
+	double prob = exp(s) * phi[0] / (phi[1] * r_2_pi);
+	TooN::Vector<2> deriv = (exp(s) / (phi[1] * r_2_pi)) * TooN::makeVector(1, -phi[0] * (1 + 2 * s) / phi[1]);
 	TooN::Matrix<2> hess;
 
 	hess[0][0] = 0;
-	hess[0][1] = -exp(s)*(1+2*s) / (phi[1] * phi[1] * r_2_pi);
+	hess[0][1] = -exp(s)*(1 + 2 * s) / (phi[1] * phi[1] * r_2_pi);
 	hess[1][0] = hess[0][1];
-	hess[1][1] = 2*phi[0]*exp(s)*(1 + 5*s + 2*s*s) / ( pow(phi[1], 3) * r_2_pi);
+	hess[1][1] = 2 * phi[0] * exp(s)*(1 + 5 * s + 2 * s*s) / (pow(phi[1], 3) * r_2_pi);
 
 	return std::tr1::make_tuple(prob, deriv, hess);
 }
@@ -146,10 +197,10 @@ template<class B> std::tr1::tuple<double, TooN::Vector<2>, TooN::Matrix<2> > spo
 template<class B> std::pair<double, TooN::Vector<2> > spot_shape_diff(const TooN::Vector<2>& x, const TooN::Vector<4, double, B>& phi)
 {
 	double s = spot_shape_s(x, phi);
-	double r_2_pi = sqrt(2*M_PI);
+	double r_2_pi = sqrt(2 * M_PI);
 
-	double prob = exp(s) * phi[0]/(phi[1]*r_2_pi);
-	TooN::Vector<2> deriv = (exp(s) / (phi[1]*r_2_pi)) * TooN::makeVector(1, -phi[0] * (1 + 2*s)/phi[1]);
+	double prob = exp(s) * phi[0] / (phi[1] * r_2_pi);
+	TooN::Vector<2> deriv = (exp(s) / (phi[1] * r_2_pi)) * TooN::makeVector(1, -phi[0] * (1 + 2 * s) / phi[1]);
 	return std::make_pair(prob, deriv);
 }
 
@@ -162,18 +213,29 @@ template<class B> std::pair<double, TooN::Vector<2> > spot_shape_diff(const TooN
 template<class B> double spot_shape(const TooN::Vector<2>& x, const TooN::Vector<4, double, B>& phi)
 {
 	double s = spot_shape_s(x, phi);
-	double r_2_pi = sqrt(2*M_PI);
-	
-	// FIXME FIXME FIXME and don't forget to fix the HESSIAN AND DERIVATIVE
-	// Should be:              1/(2 pi s^2)  for two dimensions
-	//                             vvvvvvvvvvvvv    http://lol.i.trollyou.com/
-	double prob = exp(s) * phi[0]/(phi[1]*r_2_pi);
+	double r_2_pi = sqrt(2 * M_PI);
+	double prob = exp(s) * phi[0] / (phi[1] * r_2_pi);
 
 
 	return prob;
 }
 
-/**Find the log probability of an image patch, 
+/** see spot_shape_hess()
+@param x \f$\Vec{x}\f$
+@param phi \f$\Vec{\phi}\f$
+@return \f$\mu(\Vec{x}, \Vec{\phi}) \f$
+@ingroup gStorm
+*/
+template<class B> double spot_shape(const TooN::Vector<3>& x, const TooN::Vector<5, double, B>& phi, double zFactor)
+{
+	double s = spot_shape_s(x, phi, zFactor);
+	double r_2_pi = sqrt(2 * M_PI);
+	double prob = exp(s) * phi[0] / (phi[1] * r_2_pi);
+	return prob;
+}
+
+
+/**Find the log probability of an image patch,
 assuming zero mean and the given variance, and no spot present.
 See also log_probability_spot()
 @param im Image
@@ -182,11 +244,11 @@ See also log_probability_spot()
 */
 inline double log_probability_no_spot(const CVD::SubImage<float>& im, double variance)
 {
-	double logprob_part=0;
-	for(int y=0; y < im.size().y; y++)
-		for(int x=0; x < im.size().x; x++)
+	double logprob_part = 0;
+	for (int y = 0; y < im.size().y; y++)
+		for (int x = 0; x < im.size().x; x++)
 			logprob_part -= im[y][x] * im[y][x];
-	return logprob_part/(2*variance) - im.size().area() * log(2*M_PI*variance)/2;
+	return logprob_part / (2 * variance) - im.size().area() * log(2 * M_PI*variance) / 2;
 
 }
 
@@ -201,10 +263,10 @@ where \e I is the image, and \e N is the number of pixels. See also ::log_probab
 The derivatives are:
 \f{eqnarray}{
 	\frac{\partial \ln P(I)}{\partial \phi_0} &=& \frac{1}{\sigma^2} \sum_{\Vec{x}}(I_{\Vec{x}} - \mu(\Vec{x},\Vec{\phi}))
-                                                           \frac{\partial}{\partial \phi_0}\mu(\Vec{x}, \Vec{\phi})\\
+														   \frac{\partial}{\partial \phi_0}\mu(\Vec{x}, \Vec{\phi})\\
 	\frac{\partial^2 \ln P(I)}{\partial \phi_0 \partial \phi_1} &=&
-	          \frac{1}{\sigma^2} \sum_{\Vec{x}}(I_{\Vec{x}} - \mu(\Vec{x},\Vec{\phi}))
-                               \frac{\partial^2}{\partial \phi_0 \partial \phi_1}\mu(\Vec{x}, \Vec{\phi}) - 
+			  \frac{1}{\sigma^2} \sum_{\Vec{x}}(I_{\Vec{x}} - \mu(\Vec{x},\Vec{\phi}))
+							   \frac{\partial^2}{\partial \phi_0 \partial \phi_1}\mu(\Vec{x}, \Vec{\phi}) -
 							   \frac{\partial}{\partial \phi_0}\mu(\Vec{x},\Vec{\phi})
 							   \frac{\partial}{\partial \phi_1}\mu(\Vec{x},\Vec{\phi})
 \f}
@@ -221,13 +283,13 @@ template<class Base> std::tr1::tuple<double, TooN::Vector<2>, TooN::Matrix<2> > 
 
 	//-1 because if the image is 3x3, ie 0,1,2 then 1,1 is the centre.
 	//If it is 2x2, ie 0,1 then .5,.5 is the centre
-	Vector<2> centre = makeVector((im.size().x-1) / 2.0, (im.size().y-1) / 2.0);
+	Vector<2> centre = makeVector((im.size().x - 1) / 2.0, (im.size().y - 1) / 2.0);
 
-	double logprob_part=0;
+	double logprob_part = 0;
 	Vector<2> diff = Zeros;
 	Matrix<2> hess = Zeros;
-	for(int y=0; y < im.size().y; y++)
-		for(int x=0; x < im.size().x; x++)
+	for (int y = 0; y < im.size().y; y++)
+		for (int x = 0; x < im.size().x; x++)
 		{
 			Vector<2> d = TooN::makeVector(x, y) - centre;
 
@@ -239,12 +301,12 @@ template<class Base> std::tr1::tuple<double, TooN::Vector<2>, TooN::Matrix<2> > 
 			double e = im[y][x] - mu;
 
 			logprob_part += -sq(e);
-			diff         += diff_mu * e;
-			hess         += e * hess_mu - diff_mu.as_col() * diff_mu.as_row();
+			diff += diff_mu * e;
+			hess += e * hess_mu - diff_mu.as_col() * diff_mu.as_row();
 		}
-	return make_tuple(   logprob_part / (2*variance) - im.size().area() * log(2*M_PI*variance)/2,
-						diff / variance,
-						hess / variance);
+	return make_tuple(logprob_part / (2 * variance) - im.size().area() * log(2 * M_PI*variance) / 2,
+		diff / variance,
+		hess / variance);
 }
 
 /** See log_probability_spot_hess
@@ -261,12 +323,12 @@ template<class Base> std::pair<double, TooN::Vector<2> > log_probability_spot_di
 	using namespace std;
 	//-1 because if the image is 3x3, ie 0,1,2 then 1,1 is the centre.
 	//If it is 2x2, ie 0,1 then .5,.5 is the centre
-	Vector<2> centre = makeVector((im.size().x-1) / 2.0, (im.size().y-1) / 2.0);
+	Vector<2> centre = makeVector((im.size().x - 1) / 2.0, (im.size().y - 1) / 2.0);
 
-	double logprob_part=0;
+	double logprob_part = 0;
 	Vector<2> diff = Zeros;
-	for(int y=0; y < im.size().y; y++)
-		for(int x=0; x < im.size().x; x++)
+	for (int y = 0; y < im.size().y; y++)
+		for (int x = 0; x < im.size().x; x++)
 		{
 			Vector<2> d = makeVector(x, y) - centre;
 
@@ -277,9 +339,9 @@ template<class Base> std::pair<double, TooN::Vector<2> > log_probability_spot_di
 			double e = im[y][x] - mu;
 
 			logprob_part += -sq(e);
-			diff         += diff_mu * e;
+			diff += diff_mu * e;
 		}
-	return make_pair(logprob_part / (2*variance) - im.size().area() * log(2*M_PI*variance)/2, diff / variance);
+	return make_pair(logprob_part / (2 * variance) - im.size().area() * log(2 * M_PI*variance) / 2, diff / variance);
 }
 
 /** See log_probability_spot_hess
@@ -293,11 +355,11 @@ template<class Base> double log_probability_spot(const CVD::SubImage<float>& im,
 {
 	//-1 because if the image is 3x3, ie 0,1,2 then 1,1 is the centre.
 	//If it is 2x2, ie 0,1 then .5,.5 is the centre
-	TooN::Vector<2> centre = TooN::makeVector((im.size().x-1) / 2.0, (im.size().y-1) / 2.0);
+	TooN::Vector<2> centre = TooN::makeVector((im.size().x - 1) / 2.0, (im.size().y - 1) / 2.0);
 
-	double logprob_part=0;
-	for(int y=0; y < im.size().y; y++)
-		for(int x=0; x < im.size().x; x++)
+	double logprob_part = 0;
+	for (int y = 0; y < im.size().y; y++)
+		for (int x = 0; x < im.size().x; x++)
 		{
 			TooN::Vector<2> d = TooN::makeVector(x, y) - centre;
 
@@ -307,7 +369,7 @@ template<class Base> double log_probability_spot(const CVD::SubImage<float>& im,
 
 			logprob_part += -sq(e);
 		}
-	return logprob_part / (2*variance) - im.size().area() * log(2*M_PI*variance)/2;
+	return logprob_part / (2 * variance) - im.size().area() * log(2 * M_PI*variance) / 2;
 }
 
 /**Compute the standard deviation of a log-normal distribution.
@@ -323,7 +385,7 @@ See log_normal().
 */
 inline double log_normal_std(double mu, double sigma)
 {
-	return sqrt((exp(sq(sigma)) - 1) * exp(2*mu + sq(sigma)));
+	return sqrt((exp(sq(sigma)) - 1) * exp(2 * mu + sq(sigma)));
 }
 
 /**Compute the mode of a log-normal distribution.
@@ -345,7 +407,7 @@ inline double log_normal_mode(double mu, double sigma)
 /**Log-normal distribution. This is given by:
 \f{eqnarray}{
 	P(x)     &=& \frac{1}{x\sigma\sqrt{2\pi}} e^{-\frac{(\ln x - \mu)^2}{s\sigma^2}}\\
-    \ln P(x) &=& -\frac{(\ln x - \mu)^2}{s\sigma^2} - \ln x - \ln\sigma\sqrt{2\pi}.
+	\ln P(x) &=& -\frac{(\ln x - \mu)^2}{s\sigma^2} - \ln x - \ln\sigma\sqrt{2\pi}.
 \f}
 @param x \e x
 @param mu \f$\mu\f$
@@ -354,7 +416,7 @@ inline double log_normal_mode(double mu, double sigma)
 */
 inline double log_log_normal(double x, double mu, double sigma)
 {
-	return -sq(ln(x) - mu) / (2*sq(sigma)) - ln(x) - ln(sigma * sqrt(2*M_PI));
+	return -sq(ln(x) - mu) / (2 * sq(sigma)) - ln(x) - ln(sigma * sqrt(2 * M_PI));
 }
 
 /**Derivative of the log of the log-normal distribution:
@@ -368,7 +430,7 @@ inline double log_log_normal(double x, double mu, double sigma)
 */
 inline double diff_log_log_normal(double x, double mu, double sigma)
 {
-	return -(1 + (ln(x) - mu)/sq(sigma)) / x;
+	return -(1 + (ln(x) - mu) / sq(sigma)) / x;
 }
 
 
@@ -383,7 +445,7 @@ inline double diff_log_log_normal(double x, double mu, double sigma)
 */
 inline double hess_log_log_normal(double x, double mu, double sigma)
 {
-	return (1 + (ln(x) - mu - 1)/sq(sigma)) / sq(x);
+	return (1 + (ln(x) - mu - 1) / sq(sigma)) / sq(x);
 }
 
 

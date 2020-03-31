@@ -7,3 +7,4 @@ Makefile
 dist-*/*
 *.class
 three_B.jar
+/.vs

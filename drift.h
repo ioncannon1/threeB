@@ -1,3 +1,22 @@
+/*
+	This file is part of B-cubed.
+
+	Copyright (C) 2009, 2010, 2011, Edward Rosten and Susan Cox
+
+	B-cubed is free software; you can redistribute it and/or
+	modify it under the terms of the GNU Lesser General Public
+	License as published by the Free Software Foundation; either
+	version 3.0 of the License, or (at your option) any later version.
+
+	This library is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+	Lesser General Public License for more details.
+
+	You should have received a copy of the GNU General Public License     
+	along with this program.  If not, see <http://www.gnu.org/licenses/>
+*/
+
 #ifndef INC_DRIFT_H
 #define INC_DRIFT_H
 
@@ -28,14 +47,17 @@ double step_to_approximate_frame(int frames, int steps, int step)
 }
 
 
+
+//RFBA: Updated Vector for 3D Process, Modified@20180306
+
 ///Apply the drift model to the spot
 ///@ingroup gMultiSpotDrift
 ///@param spot Spot parameters (size/brightness/position)
 ///@param drift Drift vector
 ///@param frame_number Frame number, note that it is real-valued.
-Vector<4> drift_spot(const Vector<4>& spot, const Vector<2>& drift, double frame_number)
+Vector<5> drift_spot(const Vector<5>& spot, const Vector<3>& drift, double frame_number)
 {
-	return spot + frame_number * makeVector(0, 0, drift[0], drift[1]);
+	return spot + frame_number * makeVector(0, 0, drift[0], drift[1], drift[2]);
 }
 
 
